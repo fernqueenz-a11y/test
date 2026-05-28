@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>BeQueenStore OTP</title>
+
+  <style>
+    body {
+      margin: 0;
+      background: linear-gradient(135deg, #ffe4f2, #eee4ff);
+      font-family: Arial, sans-serif;
+      color: #333;
+    }
+
+    .container {
+      max-width: 500px;
+      margin: 40px auto;
+      background: #ffffff;
+      padding: 26px;
+      border-radius: 24px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.12);
+    }
+
+    .logo {
+      width: 110px;
+      height: 110px;
+      object-fit: contain;
+      display: block;
+      margin: 0 auto 12px;
+      border-radius: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      color: #a64ac9;
+      margin: 8px 0;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #777;
+      font-size: 14px;
+      margin-bottom: 20px;
+    }
+
+    input {
+      width: 100%;
+      padding: 14px;
+      border-radius: 14px;
+      border: 1px solid #ddd;
+      font-size: 16px;
+      box-sizing: border-box;
+      outline: none;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      margin-top: 12px;
+      border: none;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #ff6fb1, #a64ac9);
+      color: white;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+
+    .status {
+      text-align: center;
+      margin-top: 16px;
+      color: #777;
+      font-size: 14px;
+    }
+
+    .card {
+      margin-top: 16px;
+      background: #faf5ff;
+      border: 1px solid #eadcff;
+      padding: 16px;
+      border-radius: 18px;
+    }
+
+    .otp {
+      font-size: 34px;
+      text-align: center;
+      color: #ff4fa3;
+      font-weight: bold;
+      letter-spacing: 4px;
+      margin: 12px 0;
+    }
+
+    .copy-btn {
+      background: #333;
+    }
+
+    .info {
+      font-size: 14px;
+      color: #555;
+      line-height: 1.6;
+      word-break: break-word;
+    }
+
+    .time {
+      font-size: 13px;
+      color: #888;
+      margin-bottom: 6px;
+    }
+
+    .empty {
+      text-align: center;
+      color: #999;
+      margin-top: 18px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="container">
+
+    <img
+      class="logo"
+      src="https://i.postimg.cc/7YfWMyqD/IMG-8664.png"
+      alt="logo"
+      onerror="this.style.display='none'"
+    >
+
+    <h1>👑Disney+ OTP</h1>
+    <div class="subtitle">กรอกอีเมลเพื่อรับรหัส OTP</div>
+
+    <input
+      id="email"
+      type="email"
+      placeholder="email address"
+    >
+
+    <button id="searchBtn" onclick="searchOtp()">
+    ค้นหา OTP
+  </button>
+
+    <div id="status" class="status"></div>
+    <div id="result"></div>
+
+  </div>
+
+  <script>
+
+const APPS_SCRIPT_URL = '/api/otp';
+
+let countdown = 15;
+let countdownInterval;
+
+async function searchOtp() {
+
+  const email = document.getElementById('email').value.trim();
+  const status = document.getElementById('status');
+  const result = document.getElementById('result');
+
+  result.innerHTML = '';
+
+  if (!email) {
+    status.innerHTML = 'กรุณากรอกอีเมลก่อนค่ะ';
+    return;
+  }
+
+  status.innerHTML = 'กำลังค้นหา OTP...';
+
+  startCountdown();
+
+  try {
+
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        email: email
+      })
+    });
+
+    const data = await response.json();
+
+    if (!data.success) {
+      status.innerHTML = data.message || 'ไม่พบข้อมูล';
+      return;
+    }
+
+    if (!data.mails || data.mails.length === 0) {
+      status.innerHTML = 'ไม่พบเมล หรือเมลยังไม่เข้า';
+      return;
+    }
+
+    status.innerHTML = '';
+
+    result.innerHTML = data.mails.slice(0,1).map((mail) => {
+
+      const otp = mail.otp || 'ไม่พบ OTP';
+
+      return `
+        <div class="card">
+
+          <div class="otp">
+            ${escapeHtml(otp)}
+          </div>
+
+          ${
+            otp !== 'ไม่พบ OTP'
+            ? `<button class="copy-btn" onclick="copyOtp('${otp}')">คัดลอก OTP</button>`
+            : `<div class="empty">ไม่พบรหัส OTP</div>`
+          }
+
+        </div>
+      `;
+
+    }).join('');
+
+  } catch (err) {
+
+    status.innerHTML =
+      'เกิดข้อผิดพลาด: ' + err.message;
+
+  }
+
+}
+
+function startCountdown() {
+
+  const btn = document.getElementById('searchBtn');
+
+  countdown = 15;
+
+  btn.disabled = true;
+
+  btn.style.opacity = '0.7';
+
+  btn.innerHTML = `รอ ${countdown} วิ`;
+
+  clearInterval(countdownInterval);
+
+  countdownInterval = setInterval(() => {
+
+    countdown--;
+
+    if (countdown <= 0) {
+
+      clearInterval(countdownInterval);
+
+      btn.disabled = false;
+
+      btn.style.opacity = '1';
+
+      btn.innerHTML = 'ค้นหา OTP';
+
+    } else {
+
+      btn.innerHTML = `รอ ${countdown} วิ`;
+
+    }
+
+  }, 1000);
+
+}
+
+function copyOtp(otp) {
+
+  navigator.clipboard.writeText(otp).then(() => {
+
+    alert('คัดลอก OTP แล้ว: ' + otp);
+
+  });
+
+}
+
+function escapeHtml(text) {
+
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+
+}
+
+</script>
+
+</body>
+</html>
